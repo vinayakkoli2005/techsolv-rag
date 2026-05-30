@@ -39,6 +39,9 @@ Thumbs.db
 *.sln
 *.sw?
 
+# Runtime data
+data/
+
 # Vector DB local storage
 chroma_db/
 qdrant_storage/
