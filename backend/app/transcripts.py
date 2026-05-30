@@ -24,8 +24,8 @@ _whisper_model = None
 def _get_whisper_model():
     global _whisper_model
     if _whisper_model is None:
-        import whisper
-        _whisper_model = whisper.load_model("base")
+        from faster_whisper import WhisperModel
+        _whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
     return _whisper_model
 
 def _download_audio(url: str, out_dir: str) -> str:
@@ -44,8 +44,8 @@ def _download_audio(url: str, out_dir: str) -> str:
 
 def _whisper_transcribe(audio_path: str) -> str:
     model = _get_whisper_model()
-    result = model.transcribe(audio_path, fp16=False)
-    return result["text"].strip()
+    segments, _ = model.transcribe(audio_path, beam_size=1)
+    return " ".join(seg.text for seg in segments).strip()
 
 def fetch_instagram_transcript(url: str) -> str:
     with tempfile.TemporaryDirectory() as tmp:
