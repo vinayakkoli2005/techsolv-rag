@@ -1,0 +1,61 @@
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vector DB local storage
+chroma_db/
+qdrant_storage/
+*.sqlite
+*.db
+
+# Whisper / audio temp files
+*.wav
+*.mp3
+*.mp4
+*.webm
+temp_audio/
+
+# Claude Code — must not appear in any commit or push
+.claude/
+CLAUDE.md
+.claudeignore
+*.claude
+claude_output/
+claude-session*
