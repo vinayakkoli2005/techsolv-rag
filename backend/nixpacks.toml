@@ -1,8 +1,12 @@
 [phases.setup]
-nixPkgs = ["ffmpeg", "python312", "python312Packages.pip"]
+nixPkgs = ["ffmpeg", "python312"]
 
 [phases.install]
-cmds = ["python3.12 -m pip install -r requirements.txt"]
+cmds = [
+  "python3.12 -m ensurepip --upgrade",
+  "python3.12 -m pip install --upgrade pip",
+  "python3.12 -m pip install -r requirements.txt"
+]
 
 [start]
 cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
