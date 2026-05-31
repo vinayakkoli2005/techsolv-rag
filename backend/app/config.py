@@ -16,5 +16,6 @@ class Settings(BaseSettings):
     chroma_persist_dir: str = "./chroma_db"
     data_dir: str = "./data"
     allowed_origins: str = "http://localhost:3000"
+    apify_api_token: Optional[str] = None
 
 settings = Settings()

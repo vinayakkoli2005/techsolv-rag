@@ -34,23 +34,32 @@ export async function streamChat(
     const { value, done } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split("\n\n");
-    buffer = events.pop() || "";
-    for (const block of events) {
-      const lines = block.split("\n");
-      let event = "message", data = "";
-      for (const line of lines) {
-        if (line.startsWith("event:")) event = line.slice(6).trim();
-        if (line.startsWith("data:")) data = line.slice(5).trim();
+
+    // Normalize CRLF to LF so splitting works regardless of sse-starlette line endings
+    buffer = buffer.replace(/\r\n/g, "\n");
+
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+
+    for (const block of parts) {
+      if (!block.trim()) continue;
+      let event = "message";
+      let data = "";
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event: ")) event = line.slice(7).trim();
+        else if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data: ")) data = line.slice(6).trim();
+        else if (line.startsWith("data:")) data = line.slice(5).trim();
       }
       if (!data) continue;
       try {
         const parsed = JSON.parse(data);
-        if (event === "token") onToken(parsed.text);
+        if (event === "token") { console.log("TOKEN", JSON.stringify(parsed)); if (parsed.text) onToken(parsed.text); }
         else if (event === "citations") onCitations(parsed.citations);
-        else if (event === "done") onDone();
-        else if (event === "error") onError(parsed.error);
+        else if (event === "done") { onDone(); return; }
+        else if (event === "error") { onError(parsed.error); return; }
       } catch {}
     }
   }
+  onDone();
 }

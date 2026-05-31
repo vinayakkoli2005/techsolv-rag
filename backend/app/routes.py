@@ -15,10 +15,13 @@ _rag_state = {"chain": None, "memory": None}
 
 @router.post("/ingest", response_model=IngestResponse)
 def ingest(req: IngestRequest):
+    import traceback, sys
     try:
         result = ingest_pair(str(req.youtube_url), str(req.instagram_url))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        tb = traceback.format_exc()
+        print(tb, file=sys.stderr, flush=True)
+        raise HTTPException(status_code=500, detail=tb)
     chain, _retriever, memory = build_rag_chain(settings)
     _rag_state["chain"] = chain
     _rag_state["memory"] = memory
@@ -48,8 +51,12 @@ async def chat(req: ChatRequest):
         try:
             async for token in chain.astream({"question": question}):
                 full.append(token)
+                import sys
+                print(f"TOKEN: {repr(token)}", file=sys.stderr, flush=True)
                 yield {"event": "token", "data": json.dumps({"text": token})}
         except Exception as e:
+            import traceback, sys
+            print(traceback.format_exc(), file=sys.stderr, flush=True)
             yield {"event": "error", "data": json.dumps({"error": str(e)})}
             return
         answer = "".join(full)

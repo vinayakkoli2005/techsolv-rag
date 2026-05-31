@@ -10,7 +10,7 @@ def get_llm(settings: Settings, streaming: bool = True) -> BaseChatModel:
         from langchain_groq import ChatGroq
         return ChatGroq(
             api_key=settings.groq_api_key,
-            model="gemma2-9b-it",
+            model="llama-3.1-8b-instant",
             temperature=0.3,
             streaming=streaming,
         )

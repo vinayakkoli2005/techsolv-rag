@@ -19,7 +19,7 @@ export function VideoCard({ label, meta }: { label: "A" | "B"; meta: VideoMeta |
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Video {label} · {meta.platform}</h3>
         <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
-          ER {meta.engagement_rate}%
+          {meta.engagement_rate > 0 ? `ER ${meta.engagement_rate}%` : "ER –"}
         </span>
       </div>
       {embed ? (
@@ -30,9 +30,9 @@ export function VideoCard({ label, meta }: { label: "A" | "B"; meta: VideoMeta |
         </a>
       )}
       <div className="grid grid-cols-3 gap-2">
-        <MetadataBadge label="Views" value={meta.views.toLocaleString()} />
-        <MetadataBadge label="Likes" value={meta.likes.toLocaleString()} />
-        <MetadataBadge label="Comments" value={meta.comments.toLocaleString()} />
+        <MetadataBadge label="Views" value={meta.views > 0 ? meta.views.toLocaleString() : "–"} />
+        <MetadataBadge label="Likes" value={meta.likes > 0 ? meta.likes.toLocaleString() : "–"} />
+        <MetadataBadge label="Comments" value={meta.comments > 0 ? meta.comments.toLocaleString() : "–"} />
         <MetadataBadge label="Creator" value={meta.creator} />
         <MetadataBadge label="Followers" value={meta.followers?.toLocaleString() ?? null} />
         <MetadataBadge label="Duration" value={meta.duration ? `${Math.round(meta.duration)}s` : null} />

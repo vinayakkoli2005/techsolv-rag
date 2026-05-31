@@ -32,21 +32,27 @@ def ingest_pair(youtube_url: str, instagram_url: str) -> Dict[str, Any]:
     ig_transcript = fetch_instagram_transcript(instagram_url)
     ig_meta = fetch_instagram_metadata(instagram_url)
 
-    yt_chunks = _chunk(yt_transcript)
-    ig_chunks = _chunk(ig_transcript)
+    # Fall back to description when transcript unavailable so Video A has some RAG content
+    yt_text = yt_transcript or yt_meta.get("description") or ""
+    ig_text = ig_transcript or ig_meta.get("description") or ""
 
-    add_chunks(
-        vs,
-        yt_chunks,
-        [{"video_id": "A", "chunk_index": i, "source_url": youtube_url}
-         for i in range(len(yt_chunks))],
-    )
-    add_chunks(
-        vs,
-        ig_chunks,
-        [{"video_id": "B", "chunk_index": i, "source_url": instagram_url}
-         for i in range(len(ig_chunks))],
-    )
+    yt_chunks = _chunk(yt_text) if yt_text else []
+    ig_chunks = _chunk(ig_text) if ig_text else []
+
+    if yt_chunks:
+        add_chunks(
+            vs,
+            yt_chunks,
+            [{"video_id": "A", "chunk_index": i, "source_url": youtube_url}
+             for i in range(len(yt_chunks))],
+        )
+    if ig_chunks:
+        add_chunks(
+            vs,
+            ig_chunks,
+            [{"video_id": "B", "chunk_index": i, "source_url": instagram_url}
+             for i in range(len(ig_chunks))],
+        )
 
     result = {
         "A": {**yt_meta, "platform": "youtube", "chunks": len(yt_chunks)},

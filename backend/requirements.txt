@@ -11,7 +11,8 @@ langchain-anthropic==0.2.0
 chromadb==0.5.5
 sentence-transformers==3.0.1
 youtube-transcript-api==0.6.2
-yt-dlp==2024.8.6
+yt-dlp==2026.3.17
+requests==2.34.2
 faster-whisper==1.0.3
 instaloader==4.13.1
 sse-starlette==2.1.3
