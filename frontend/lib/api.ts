@@ -8,7 +8,10 @@ export async function ingestVideos(youtube_url: string, instagram_url: string): 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ youtube_url, instagram_url }),
   });
-  if (!r.ok) throw new Error(`Ingest failed: ${r.status}`);
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    throw new Error(`Ingest failed ${r.status}: ${body}`);
+  }
   return r.json();
 }
 
