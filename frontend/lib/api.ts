@@ -1,6 +1,6 @@
 import type { IngestResponse, Citation } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE || "https://techsolv-rag-production.up.railway.app";
+const BASE = "https://techsolv-rag-production.up.railway.app";
 
 export async function ingestVideos(youtube_url: string, instagram_url: string): Promise<IngestResponse> {
   const r = await fetch(`${BASE}/api/ingest`, {
