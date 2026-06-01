@@ -230,8 +230,14 @@ def _whisper_transcribe(audio_path: str) -> str:
     return " ".join(seg.text for seg in segments).strip()
 
 def fetch_instagram_transcript(url: str) -> str:
-    cookies_file = _COOKIES_FILE if os.path.exists(_COOKIES_FILE) else None
+    # On cloud (no local ffmpeg), skip Whisper — use caption from yt-dlp description instead.
+    # Whisper loads a ~150MB model into RAM which OOM-kills Railway's container.
     ffmpeg_loc = _find_ffmpeg_location()
+    if not ffmpeg_loc:
+        print("[instagram] no local ffmpeg, skipping Whisper — using yt-dlp description as transcript", file=sys.stderr, flush=True)
+        return _fetch_instagram_caption_via_ytdlp(url)
+
+    cookies_file = _COOKIES_FILE if os.path.exists(_COOKIES_FILE) else None
     print(f"[instagram] cookies_file={cookies_file!r}  ffmpeg_loc={ffmpeg_loc!r}", file=sys.stderr, flush=True)
     try:
         with tempfile.TemporaryDirectory() as tmp:
@@ -244,8 +250,7 @@ def fetch_instagram_transcript(url: str) -> str:
             }
             if cookies_file:
                 ydl_opts["cookiefile"] = cookies_file
-            if ffmpeg_loc:
-                ydl_opts["ffmpeg_location"] = ffmpeg_loc
+            ydl_opts["ffmpeg_location"] = ffmpeg_loc
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 audio = os.path.join(tmp, f"{info.get('id')}.mp3")
@@ -255,4 +260,20 @@ def fetch_instagram_transcript(url: str) -> str:
             return text
     except Exception:
         print(f"[instagram] FAILED:\n{traceback.format_exc()}", file=sys.stderr, flush=True)
+        return ""
+
+
+def _fetch_instagram_caption_via_ytdlp(url: str) -> str:
+    cookies_file = _COOKIES_FILE if os.path.exists(_COOKIES_FILE) else None
+    opts: dict = {"quiet": True, "no_warnings": True, "skip_download": True}
+    if cookies_file:
+        opts["cookiefile"] = cookies_file
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        text = info.get("description") or info.get("title") or ""
+        print(f"[instagram] caption fallback: {len(text)} chars", file=sys.stderr, flush=True)
+        return text
+    except Exception:
+        print(f"[instagram] caption fallback FAILED:\n{traceback.format_exc()}", file=sys.stderr, flush=True)
         return ""
