@@ -48,7 +48,84 @@ def _make_yt_meta(info: Dict[str, Any], url: str) -> Dict[str, Any]:
         "description": info.get("description") or "",
     }
 
+def _fetch_youtube_via_apify(url: str) -> Dict[str, Any] | None:
+    token = (settings.apify_api_token or "").strip()
+    if not token:
+        return None
+    print(f"[yt_apify] running youtube-scraper for {url}", file=sys.stderr, flush=True)
+    run_url = "https://api.apify.com/v2/acts/streamers~youtube-scraper/runs"
+    payload = {"startUrls": [{"url": url}], "maxResults": 1}
+    try:
+        r = requests.post(run_url, json=payload,
+                          headers={"Authorization": f"Bearer {token}"}, timeout=15)
+        r.raise_for_status()
+        run_id = r.json()["data"]["id"]
+        dataset_id = r.json()["data"]["defaultDatasetId"]
+    except Exception as e:
+        print(f"[yt_apify] failed to start run: {e}", file=sys.stderr, flush=True)
+        return None
+
+    status_url = f"https://api.apify.com/v2/acts/streamers~youtube-scraper/runs/{run_id}"
+    for _ in range(18):
+        time.sleep(5)
+        try:
+            s = requests.get(status_url, headers={"Authorization": f"Bearer {token}"}, timeout=10)
+            status = s.json()["data"]["status"]
+            print(f"[yt_apify] run status: {status}", file=sys.stderr, flush=True)
+            if status in ("SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"):
+                break
+        except Exception:
+            pass
+
+    try:
+        d = requests.get(
+            f"https://api.apify.com/v2/datasets/{dataset_id}/items?limit=1",
+            headers={"Authorization": f"Bearer {token}"}, timeout=10)
+        items = d.json()
+        if not items:
+            print("[yt_apify] empty dataset", file=sys.stderr, flush=True)
+            return None
+        item = items[0]
+        print(f"[yt_apify] raw keys: {list(item.keys())}", file=sys.stderr, flush=True)
+        views = item.get("viewCount") or item.get("views") or 0
+        likes = item.get("likes") or item.get("likeCount") or 0
+        comments = item.get("commentsCount") or item.get("commentCount") or 0
+        followers = item.get("channelSubscriberCount") or item.get("subscriberCount") or None
+        duration_str = item.get("duration") or ""
+        duration_secs = None
+        if duration_str:
+            parts = duration_str.split(":")
+            try:
+                if len(parts) == 3:
+                    duration_secs = int(parts[0])*3600 + int(parts[1])*60 + int(parts[2])
+                elif len(parts) == 2:
+                    duration_secs = int(parts[0])*60 + int(parts[1])
+            except Exception:
+                pass
+        return {
+            "title": item.get("title"),
+            "url": item.get("url", url),
+            "views": views,
+            "likes": likes,
+            "comments": comments,
+            "duration": duration_secs,
+            "upload_date": (item.get("date") or "")[:10].replace("-", "") or None,
+            "creator": item.get("channelName") or item.get("channel") or "unknown",
+            "followers": followers,
+            "hashtags": item.get("hashtags") or [],
+            "engagement_rate": compute_engagement_rate(views, likes, comments, followers),
+            "description": item.get("text") or item.get("description") or "",
+        }
+    except Exception as e:
+        print(f"[yt_apify] dataset fetch failed: {e}", file=sys.stderr, flush=True)
+        return None
+
+
 def fetch_youtube_metadata(url: str) -> Dict[str, Any]:
+    apify_result = _fetch_youtube_via_apify(url)
+    if apify_result:
+        return apify_result
+
     for cookiefile in [_YT_AUTH_COOKIES, None]:
         try:
             info = _yt_dlp_extract(url, cookiefile=cookiefile)
